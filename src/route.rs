@@ -1,5 +1,4 @@
 use serde::Deserialize;
-
 use tower_http::services::ServeDir;
 use axum::{
     extract::Query, 
@@ -8,7 +7,6 @@ use axum::{
     Router, 
 };
 
-// 01. query
 #[derive(Debug, Deserialize)]
 struct MyJob{
     name: String, 
@@ -20,12 +18,9 @@ async fn handle_home(Query(job): Query<MyJob>) -> impl IntoResponse{
     Html(res)
 }
 
-
-// 02. route
 pub fn route_app() -> Router{
-    let res = Router::new()
-        .route("/", get(handle_home));
-    res
+    Router::new()
+        .route("/", get(handle_home))
 }
 
 pub fn route_static() -> Router{
