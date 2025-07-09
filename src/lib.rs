@@ -6,32 +6,46 @@ use axum::{
     RequestPartsExt, 
     Router,  
 };
+use tracing_subscriber::EnvFilter;
 
 mod route;
 mod err;
 mod web;
 mod model;
+mod config;
 
 pub use self::err::{MyError, MyResult};
-use route::{route_app, route_static};
+pub use config::config;
+use route::{route_app, route_static, route_static1};
 
 #[tokio::main]
 pub async fn run(){
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:8090").await.unwrap();
+    // tracing
+    tracing_subscriber::fmt()
+        .without_time()
+        .with_target(false)
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
     // shared state
     let mydb = model::MyDB::new().await.unwrap();
+
     // middleware
     let route_api = model::route_ticket(mydb)
         .route_layer(middleware::from_fn(map_auth));
-    // main route
+
+    // start server
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:8090").await.unwrap();
+
     let app = Router::new()
         .merge(route_app())
         .merge(web::login::route_login())
         .nest("/api", route_api)
         .layer(middleware::map_response(map_resp))
-        .fallback_service(route_static());
-    // start server
-    println!("server listening on {}", listener.local_addr().unwrap());
+        .fallback_service(route_static())
+        .fallback_service(route_static1());
+
+    tracing::info!("server listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
 

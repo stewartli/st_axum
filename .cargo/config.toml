@@ -1,0 +1,6 @@
+[env]
+RUST_LOG="st_axum=debug"
+SERVICE_WEB_FOLDER="web-folder/"
+
+
+
