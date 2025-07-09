@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>{% block title %} {% endblock %} - FAUDIT2</title>
+    {% block meta %} {% endblock %}
+    <link rel="stylesheet" href="/asset/style.css">
+    <link rel="icon" href="/asset/favicon.ico" type="image/x-icon">
+  </head>
+  <body>
+    <header>
+      {% include "partial/nav.html" %}
+    </header>
+    <main>
+      {% block main %}
+      {% endblock %}
+    </main>
+    <script src="/asset/index.js"></script>
+  </body>
+</html>

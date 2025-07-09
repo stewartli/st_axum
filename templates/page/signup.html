@@ -1,0 +1,33 @@
+{% extends "index.html" %}
+
+
+{% block title %}
+SignUp {% call super() %}
+{% endblock %}
+
+
+{% block meta %}
+<meta name="description" content="financial audit data analytics">
+{% endblock %}
+
+
+{% block main %}
+<h1>This is signup page</h1>
+<form method="POST" action="/temp">
+  {% if inner > 0 %}
+  <p>error happended {{inner}}</p>
+  {% else %}
+  <p>input fine</p>
+  {% endif %}
+
+  <input type="text" placeholder="your email" name="email">
+  <input type="text" placeholder="your password" name="pass">
+  <button type="submit">Submit</button>
+</form>
+<form method="GET" action="/">
+  <button>LogIn</button>
+</form>
+{% endblock %}
+
+
+

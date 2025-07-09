@@ -1,12 +1,17 @@
+#![allow(unused_imports)]
+
+use tracing::Span;
+use tracing_subscriber::EnvFilter;
+use tower_http::trace::TraceLayer;
 use axum::{
+    body::Body, 
     extract::{FromRequestParts, Request}, 
     http::{Method, Uri}, 
     middleware::{self, Next}, 
     response::Response, 
     RequestPartsExt, 
-    Router,  
+    Router,   
 };
-use tracing_subscriber::EnvFilter;
 
 mod route;
 mod err;
@@ -16,7 +21,7 @@ mod config;
 
 pub use self::err::{MyError, MyResult};
 pub use config::config;
-use route::{route_app, route_static, route_static1};
+use route::{route_app, route_html, route_static, route_static1};
 
 #[tokio::main]
 pub async fn run(){
@@ -36,16 +41,18 @@ pub async fn run(){
 
     // start server
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8090").await.unwrap();
+    tracing::info!("server listening on {}", listener.local_addr().unwrap());
 
     let app = Router::new()
         .merge(route_app())
+        .merge(route_html())
         .merge(web::login::route_login())
         .nest("/api", route_api)
         .layer(middleware::map_response(map_resp))
         .fallback_service(route_static())
         .fallback_service(route_static1());
+        // .layer(TraceLayer::new_for_http().make_span_with(|_| tracing::info_span!("http-request")).on_request(trace_req))
 
-    tracing::info!("server listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -87,4 +94,10 @@ impl<S: Send + Sync> FromRequestParts<S> for User{
     }
 }
 
+// 03. trace layer
+// lifetime issue: https://docs.rs/tower-http/latest/tower_http/trace/index.html
+#[allow(unused)]
+fn trace_req(req: &Request<Body>, _: &Span){
+    tracing::info!("request: method {} path {}", req.method(), req.uri().path());
+}
 
