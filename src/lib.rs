@@ -2,13 +2,13 @@
 
 use tracing::Span;
 use tracing_subscriber::EnvFilter;
+use tower::{Layer , Service, ServiceBuilder};
 use tower_http::trace::TraceLayer;
 use axum::{
     body::Body, 
     extract::{FromRequestParts, Request}, 
-    http::{Method, Uri}, 
+    http::{Method, Response, Uri}, 
     middleware::{self, Next}, 
-    response::Response, 
     RequestPartsExt, 
     Router,   
 };
@@ -49,6 +49,8 @@ pub async fn run(){
         .merge(web::login::route_login())
         .nest("/api", route_api)
         .layer(middleware::map_response(map_resp))
+        // tower Service trait
+        .layer(MyHelloLayer::new())
         // fallback service
         .fallback_service(route_static())
         // fallback handler [not matched route]
@@ -60,7 +62,7 @@ pub async fn run(){
 
 // 01. middleware
 // map_res: https://docs.rs/axum/latest/axum/middleware/fn.map_response.html
-async fn map_resp(mut res: Response) -> Response{
+async fn map_resp(mut res: axum::response::Response) -> axum::response::Response{
     res.headers_mut().insert("x-foo", "foo".parse().unwrap());
     res
 }
@@ -72,7 +74,7 @@ async fn map_auth(
     method: Method, 
     req: Request, 
     next: Next, 
-) -> MyResult<Response>{
+) -> MyResult<axum::response::Response>{
     // request methods
     let target = req.headers().get("x-foo").unwrap().to_str().unwrap();
     println!("{}", target);
@@ -103,5 +105,56 @@ impl<S: Send + Sync> FromRequestParts<S> for User{
 #[allow(unused)]
 fn trace_req(req: &Request<Body>, _: &Span){
     tracing::info!("request: method {} path {}", req.method(), req.uri().path());
+}
+
+// 04 Service trait 
+// https://docs.rs/tower/latest/tower/trait.Service.html
+#[derive(Clone)]
+struct MyHello<S>{
+    inner: S, 
+}
+
+impl<S> MyHello<S>{
+    fn new(inner: S) -> Self{
+        Self{inner}
+    }
+}
+
+impl<S, B> tower::Service<Request<B>> for MyHello<S>
+where 
+    S: Service<Request<B>> + Send + Clone + 'static,
+    S::Future: Send, 
+    // 1> constrait your response
+    // S::Response: Debug + Display, 
+{
+    // 2> specify response or other type [http vs axum response]
+    type Response = S::Response;
+    type Error = S::Error;
+    type Future = S::Future;
+
+    fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> std::task::Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, req: Request<B>) -> Self::Future {
+        tracing::info!("call service trait {}", req.method());
+        self.inner.call(req)
+    }
+} 
+
+#[derive(Clone)]
+struct MyHelloLayer;
+
+impl MyHelloLayer{
+    fn new() -> Self{
+        Self{}
+    }
+}
+
+impl<S> Layer<S> for MyHelloLayer{
+    type Service = MyHello<S>;
+    fn layer(&self, inner: S) -> Self::Service {
+        MyHello::new(inner)
+    }
 }
 
