@@ -49,8 +49,10 @@ pub async fn run(){
         .merge(web::login::route_login())
         .nest("/api", route_api)
         .layer(middleware::map_response(map_resp))
+        // fallback service
         .fallback_service(route_static())
-        .fallback_service(route_static1());
+        // fallback handler [not matched route]
+        .fallback(route_static1());
         // .layer(TraceLayer::new_for_http().make_span_with(|_| tracing::info_span!("http-request")).on_request(trace_req))
 
     axum::serve(listener, app).await.unwrap();
@@ -76,10 +78,12 @@ async fn map_auth(
     println!("{}", target);
     // use extractor
     println!("id is {} by calling {}", user?.id, method.as_str());
+    // response methods
     Ok(next.run(req).await)
 }
 
 // 02. extractor 
+// Extension: https://docs.rs/axum/latest/axum/struct.Extension.html
 #[derive(Debug)]
 struct User{
     id: i32, 

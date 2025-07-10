@@ -50,6 +50,7 @@ pub fn route_static1() -> MethodRouter{
 }
 
 // 03. html templates
+// https://askama.readthedocs.io/en/latest/template_syntax.html?highlight=call%20runction#call
 #[derive(askama::Template)]
 #[template(path = "page/home.html")]
 struct HomeTemplate{}
@@ -59,6 +60,12 @@ struct HomeTemplate{}
 struct SignUpTemplate{
     // only for UI 
     inner: usize, 
+    // askama HtmlSafe trait does not suport struct with const param
+    // change: fn(usize) -> usize, 
+}
+
+fn change(x: &usize) -> usize{
+    *x + 10
 }
 
 async fn handle_html_home() -> impl IntoResponse{

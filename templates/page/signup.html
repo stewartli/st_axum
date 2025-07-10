@@ -15,7 +15,7 @@ SignUp {% call super() %}
 <h1>This is signup page</h1>
 <form method="POST" action="/temp">
   {% if inner > 0 %}
-  <p>error happended {{inner}}</p>
+  <p>error happended {{ self::change(inner) }}</p>
   {% else %}
   <p>input fine</p>
   {% endif %}
