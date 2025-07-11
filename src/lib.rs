@@ -86,6 +86,7 @@ async fn map_auth(
 
 // 02. extractor 
 // Extension: https://docs.rs/axum/latest/axum/struct.Extension.html
+// Rejection: https://docs.rs/axum/latest/axum/extract/rejection/index.html
 #[derive(Debug)]
 struct User{
     id: i32, 

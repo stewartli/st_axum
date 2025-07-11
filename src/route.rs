@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 
 use serde::Deserialize;
-use validator::Validate;
+use validator::{Validate, ValidationError};
 use askama::Template;
 use tower_http::services::ServeDir;
 
@@ -11,10 +11,10 @@ use axum::{
     http::StatusCode, 
     response::{Html, IntoResponse, Redirect, Response}, 
     routing::{any_service, get, get_service, MethodRouter}, 
-    Form, Router,    
+    Form, Router, Json,
 };
 
-use crate::config;
+use crate::{config, MyResult};
 
 // 01. query param
 #[derive(Debug, Deserialize)]
@@ -80,9 +80,22 @@ async fn handle_html_sign() -> impl IntoResponse{
 
 #[derive(Debug, Deserialize, Validate)]
 struct UserForm{
+    // length, range, email, custom, 
+    #[validate(email)]
     email: String,
-    #[validate(length(min = 10, message = "incorrect password"))]
+    #[validate(
+        length(min = 10, message = "incorrect password"), 
+        custom(function = "check_num")
+    )]
     pass: String, 
+}
+
+fn check_num(x: &str) -> Result<(), ValidationError>{
+    // must be ValidationError
+    match x.contains("3"){
+        true => Ok(()), 
+        false => Err(ValidationError::new("password does not contain 3")), 
+    }
 }
 
 async fn handle_form(Form(user_form): Form<UserForm>) -> Response {
@@ -90,14 +103,18 @@ async fn handle_form(Form(user_form): Form<UserForm>) -> Response {
     let res = match user_form.validate(){
         Ok(_) => Redirect::to("/").into_response(), 
         Err(x) => {
-            let inner = x.to_string().len();
-            let target = SignUpTemplate{inner}.render().unwrap();
-            (StatusCode::BAD_REQUEST, Html(target)).into_response()
+            // 1> response html page
+            // let inner = x.to_string().len();
+            // let target = SignUpTemplate{inner}.render().unwrap();
+            // (StatusCode::BAD_REQUEST, Html(target)).into_response()
+            // 2> response json error
+            Json(x.errors()).into_response()
         }
     };
     res
 }
 
+// oneshot: https://docs.rs/axum/latest/axum/struct.Router.html
 pub fn route_html() -> Router{
     Router::new()
         .route(
